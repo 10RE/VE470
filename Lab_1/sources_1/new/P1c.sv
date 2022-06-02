@@ -8,7 +8,7 @@ module ps2(
     );
     
     assign gnt = {en & req[1], en & req[0] & ~req[1]};
-    assign req_up = en & (req[1] | req[0]);
+    assign req_up =  en & (~(req[1] | req[0]));
     
 endmodule
 
@@ -23,8 +23,7 @@ module ps4(
     logic transit_req_in;
     
     ps2 left(.req(req[3:2]), .en(en), .gnt(gnt[3:2]), .req_up(transit_req));
-    ps2 right(.req(req[1:0]), .en(transit_req_in), .gnt(gnt[1:0]), .req_up(req_up));
-    assign transit_req_in = ~transit_req & en;
+    ps2 right(.req(req[1:0]), .en(transit_req), .gnt(gnt[1:0]), .req_up(req_up));
     
 endmodule
 
@@ -39,8 +38,7 @@ module ps8(
     logic transit_req_in;
     
     ps4 left(.req(req[7:4]), .en(en), .gnt(gnt[7:4]), .req_up(transit_req));
-    ps4 right(.req(req[3:0]), .en(transit_req_in), .gnt(gnt[3:0]), .req_up(req_up));
-    assign transit_req_in = ~transit_req & en;
+    ps4 right(.req(req[3:0]), .en(transit_req), .gnt(gnt[3:0]), .req_up(req_up));
     
 endmodule
 
