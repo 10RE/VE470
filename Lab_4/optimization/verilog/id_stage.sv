@@ -7,7 +7,7 @@
 //                 compute immediate operand (if applicable)           // 
 //                                                                     //
 /////////////////////////////////////////////////////////////////////////
-
+`define DEBUG_TEST
 
 `timescale 1ns/100ps
 
@@ -24,7 +24,7 @@ module decoder(
 	                      // reflect noop (except valid_inst)
 	//see sys_defs.svh for definition
 	input IF_ID_PACKET if_packet,
-	input FORWARD_TYPE forward,
+	//input FORWARD_TYPE forward,
 	
 	output ALU_OPA_SELECT opa_select,
 	output ALU_OPB_SELECT opb_select,
@@ -231,7 +231,17 @@ module id_stage(
 	input  IF_ID_PACKET if_id_packet_in,
 	
 	output ID_EX_PACKET id_packet_out
+
+`ifdef DEBUG_TEST
+	,
+	output logic EX_inst_use_mem_debug
+`endif
+
 );
+
+`ifdef DEBUG_TEST
+	assign EX_inst_use_mem_debug = inst_use_mem;
+`endif
 
 	logic local_halt;
 	ID_EX_PACKET local_halt_id_packet_out;
@@ -258,7 +268,7 @@ module id_stage(
 	// instantiate the instruction decoder
 	decoder decoder_0 (
 		.if_packet(if_id_packet_in),
-		.forward(local_id_packet_out.forward),	 
+		//.forward(local_id_packet_out.forward),	 
 		// Outputs
 		.opa_select(local_id_packet_out.opa_select),
 		.opb_select(local_id_packet_out.opb_select),
@@ -284,18 +294,200 @@ module id_stage(
 		endcase
 	end
 
+	logic EX_dest_equal_rs1;
+	logic EX_dest_equal_rs2;
+	logic MEM_dest_equal_rs1;
+	logic MEM_dest_equal_rs2;
+	logic inst_use_mem;
+	logic EX_inst_load;
+	logic EX_inst_read_only;
+	logic MEM_inst_read_only;
+	//logic opa_rs;
+	//logic opb_rs;
+
+	assign EX_dest_equal_rs1 = (if_id_packet_in.EX_dest_reg_idx == if_id_packet_in.inst.r.rs1) && !EX_inst_read_only; //&& opa_rs;
+	assign EX_dest_equal_rs2 = (if_id_packet_in.EX_dest_reg_idx == if_id_packet_in.inst.r.rs2) && !EX_inst_read_only; //&& opb_rs;
+	assign MEM_dest_equal_rs1 = (if_id_packet_in.MEM_dest_reg_idx == if_id_packet_in.inst.r.rs1) && !MEM_inst_read_only; //&& opa_rs;
+	assign MEM_dest_equal_rs2 = (if_id_packet_in.MEM_dest_reg_idx == if_id_packet_in.inst.r.rs2) && !MEM_inst_read_only; //&& opb_rs;
+	always_comb begin
+		casez(if_id_packet_in.inst)
+			`RV32_LB, `RV32_LH, `RV32_LW, `RV32_LBU, `RV32_LHU, `RV32_SB, `RV32_SH, `RV32_SW: inst_use_mem = 1;
+			default: inst_use_mem = 0;
+		endcase
+		casez(if_id_packet_in.EX_inst)
+			`RV32_LB, `RV32_LH, `RV32_LW, `RV32_LBU, `RV32_LHU: EX_inst_load = 1;
+			default: EX_inst_load = 0;
+		endcase
+		casez(if_id_packet_in.EX_inst)
+			`RV32_JAL, `RV32_JALR, `RV32_BEQ, `RV32_BNE, `RV32_BLT, `RV32_BGE, `RV32_BLTU, `RV32_BGEU, `RV32_SB, `RV32_SH, `RV32_SW: EX_inst_read_only = 1;
+			default: EX_inst_read_only = 0;
+		endcase
+		casez(if_id_packet_in.MEM_inst)
+			`RV32_JAL, `RV32_JALR, `RV32_BEQ, `RV32_BNE, `RV32_BLT, `RV32_BGE, `RV32_BLTU, `RV32_BGEU, `RV32_SB, `RV32_SH, `RV32_SW: MEM_inst_read_only = 1;
+			default: MEM_inst_read_only = 0;
+		endcase
+	end
+	/*
+	assign EX_inst_use_mem = ((if_id_packet_in.EX_inst == `RV32_LB) |
+							 (if_id_packet_in.EX_inst == `RV32_LH) |
+							 (if_id_packet_in.EX_inst == `RV32_LW) |
+							 (if_id_packet_in.EX_inst == `RV32_LBU) |
+							 (if_id_packet_in.EX_inst == `RV32_LHU) |
+							 (if_id_packet_in.EX_inst == `RV32_SB) |
+							 (if_id_packet_in.EX_inst == `RV32_SH) |
+							 (if_id_packet_in.EX_inst == `RV32_SW)) ? 1 : 0;
+	assign EX_inst_load = ((if_id_packet_in.EX_inst == `RV32_LB) |
+							 (if_id_packet_in.EX_inst == `RV32_LH) |
+							 (if_id_packet_in.EX_inst == `RV32_LW) |
+							 (if_id_packet_in.EX_inst == `RV32_LBU) |
+							 (if_id_packet_in.EX_inst == `RV32_LHU)) ? 1 : 0;
+	assign EX_inst_read_only = ((if_id_packet_in.EX_inst == `RV32_JAL) |
+							 (if_id_packet_in.EX_inst == `RV32_JALR) |
+							 (if_id_packet_in.EX_inst == `RV32_BEQ) |
+							 (if_id_packet_in.EX_inst == `RV32_BNE) |
+							 (if_id_packet_in.EX_inst == `RV32_BLT) |
+							 (if_id_packet_in.EX_inst == `RV32_BGE) |
+							 (if_id_packet_in.EX_inst == `RV32_BLTU) |
+							 (if_id_packet_in.EX_inst == `RV32_BGEU) |
+							 (if_id_packet_in.EX_inst == `RV32_SB) |
+							 (if_id_packet_in.EX_inst == `RV32_SH) |
+							 (if_id_packet_in.EX_inst == `RV32_SW)) ? 1 : 0;
+	assign MEM_inst_read_only = ((if_id_packet_in.MEM_inst == `RV32_JAL) |
+							 (if_id_packet_in.MEM_inst == `RV32_JALR) |
+							 (if_id_packet_in.MEM_inst == `RV32_BEQ) |
+							 (if_id_packet_in.MEM_inst == `RV32_BNE) |
+							 (if_id_packet_in.MEM_inst == `RV32_BLT) |
+							 (if_id_packet_in.MEM_inst == `RV32_BGE) |
+							 (if_id_packet_in.MEM_inst == `RV32_BLTU) |
+							 (if_id_packet_in.MEM_inst == `RV32_BGEU) |
+							 (if_id_packet_in.MEM_inst == `RV32_SB) |
+							 (if_id_packet_in.MEM_inst == `RV32_SH) |
+							 (if_id_packet_in.MEM_inst == `RV32_SW)) ? 1 : 0;
+	*/
+	//assign opa_rs = local_id_packet_out.opa_select == OPA_IS_RS1;
+	//assign opb_rs = local_id_packet_out.opb_select == OPB_IS_RS2;
+							 
+
 	always_comb begin
 		local_id_packet_out.inst = ( if_id_packet_in.inst == 0 ) ? `NOP : if_id_packet_in.inst;
 		
-		casez (if_id_packet_in.inst)
-			`RV32_LB, `RV32_LH, `RV32_LW, `RV32_LBU, `RV32_LHU, `RV32_SB, `RV32_SH, `RV32_SW: begin
-				local_id_packet_out.s_hazard = STRUCTURAL_HAZARD;
-			end
-			default: begin
-				local_id_packet_out.s_hazard = N_STRUCTURAL_HAZARD;
-			end
-		endcase
+		if (inst_use_mem) begin
+			local_id_packet_out.s_hazard = STRUCTURAL_HAZARD;
+		end
+		else begin
+			local_id_packet_out.s_hazard = N_STRUCTURAL_HAZARD;
+		end
 
+		if (EX_inst_load) begin
+			if (EX_dest_equal_rs1) begin
+				local_halt = 1'b1;
+				local_halt_id_packet_out = '{
+					if_id_packet_in.NPC,
+					if_id_packet_in.PC,
+					0,
+					0,
+					OPA_IS_RS1,
+					OPB_IS_RS2,
+					`NOP,
+					`ZERO_REG,
+					ALU_ADD,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`TRUE, // valid
+					WB_EX_A_HALT,
+					local_id_packet_out.s_hazard,
+					0,
+					0
+				};
+			end
+			else if (EX_dest_equal_rs2) begin
+				local_halt = 1'b1;
+				local_halt_id_packet_out = '{
+					if_id_packet_in.NPC,
+					if_id_packet_in.PC,
+					0,
+					0,
+					OPA_IS_RS1,
+					OPB_IS_RS2,
+					`NOP,
+					`ZERO_REG,
+					ALU_ADD,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`FALSE,
+					`TRUE, // valid
+					WB_EX_B_HALT,
+					local_id_packet_out.s_hazard,
+					0,
+					0
+				};
+			end
+			else if (MEM_dest_equal_rs1 && MEM_dest_equal_rs2) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = WB_A_WB_B;
+			end
+			else if (MEM_dest_equal_rs1 && !MEM_dest_equal_rs2) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = WB_EX_A;
+			end
+			else if (MEM_dest_equal_rs2 && !MEM_dest_equal_rs1) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = WB_EX_B;
+			end
+			else begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = N_FORWARD;
+			end
+		end
+		else begin
+			if (EX_dest_equal_rs1 && EX_dest_equal_rs2) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = MEM_A_MEM_B;
+			end
+			else if (EX_dest_equal_rs1 && MEM_dest_equal_rs2) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = MEM_A_WB_B;
+			end
+			else if (EX_dest_equal_rs2 && MEM_dest_equal_rs1) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = MEM_B_WB_A;
+			end 
+			else if (MEM_dest_equal_rs1 && MEM_dest_equal_rs2) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = WB_A_WB_B;
+			end
+			else if (EX_dest_equal_rs1) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = MEM_EX_A;
+			end
+			else if (EX_dest_equal_rs2) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = MEM_EX_B;
+			end
+			else if (MEM_dest_equal_rs1) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = WB_EX_A;
+			end
+			else if (MEM_dest_equal_rs2) begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = WB_EX_B;
+			end
+			else begin
+				local_halt = 1'b0;
+				local_id_packet_out.forward = N_FORWARD;
+			end
+		end
+
+		/*
 		if (if_id_packet_in.EX_dest_reg_idx == if_id_packet_in.inst.r.rs1) begin
 			//id_packet_out.forward = MEM_EX_A;
 			casez (if_id_packet_in.EX_inst)
@@ -328,6 +520,9 @@ module id_stage(
 				default: begin
 					local_halt = 1'b0;
 					local_id_packet_out.forward = MEM_EX_A;
+					if (if_id_packet_in.MEM_dest_reg_idx == if_id_packet_in.inst.r.rs2) begin
+						local_id_packet_out.forward = WB_EX_B;
+					end
 				end
 			endcase
 		end
@@ -377,7 +572,7 @@ module id_stage(
 			local_halt = 1'b0;
 			local_id_packet_out.forward = N_FORWARD;
 		end
-		
+		*/
 	end
 
 	assign id_packet_out = local_halt ? local_halt_id_packet_out : local_id_packet_out;

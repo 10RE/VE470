@@ -8,7 +8,7 @@
 //                                                                     //
 //                                                                     //
 /////////////////////////////////////////////////////////////////////////
-
+`define DEBUG_TEST
 `timescale 1ns/100ps
 
 module if_stage(
@@ -25,8 +25,18 @@ module if_stage(
 
 	output logic [`XLEN-1:0] proc2Imem_addr,    // Address sent to Instruction memory
 	output IF_ID_PACKET if_packet_out         // Output data packet from IF going to ID, see sys_defs for signal information 
+
+	`ifdef DEBUG_TEST
+	,
+	output logic [`XLEN-1:0] PC_reg_debug,
+	output logic [`XLEN-1:0] next_PC_debug
+	`endif
 );
 
+	`ifdef DEBUG_TEST
+	assign PC_reg_debug = PC_reg;
+	assign next_PC_debug = next_PC;
+	`endif
 
 	logic    [`XLEN-1:0] PC_reg;             // PC we are currently fetching
 	

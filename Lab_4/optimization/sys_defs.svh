@@ -101,7 +101,11 @@ typedef enum logic [3:0] {
 	WB_EX_A = 4'h3,
 	WB_EX_B = 4'h4,
 	WB_EX_A_HALT = 4'h5,
-	WB_EX_B_HALT = 4'h6
+	WB_EX_B_HALT = 4'h6,
+	MEM_A_WB_B = 4'h7,
+	MEM_B_WB_A = 4'h8,
+	MEM_A_MEM_B = 4'h9,
+	WB_A_WB_B = 4'ha
 } FORWARD_TYPE;
 
 typedef enum logic {
@@ -280,7 +284,7 @@ typedef struct packed {
 	logic [4:0] MEM_dest_reg_idx;
 
 	INST EX_inst;
-	//INST MEM_inst;
+	INST MEM_inst;
 } IF_ID_PACKET;
 
 //////////////////////////////////////////////
@@ -332,8 +336,8 @@ typedef struct packed {
 	logic [2:0]       mem_size; // byte, half-word or word
 
 	STRUCTURAL_HAZARD_TYPE	s_hazard;
-	logic 			  cond_branch;
-	//INST 			  inst; // instruction
+	//logic 			  cond_branch;
+	INST 			  inst; // instruction
 } EX_MEM_PACKET;
 
 `endif // __SYS_DEFS_VH__
