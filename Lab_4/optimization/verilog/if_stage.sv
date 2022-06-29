@@ -43,11 +43,14 @@ module if_stage(
 	logic    [`XLEN-1:0] PC_plus_4;
 	logic    [`XLEN-1:0] next_PC;
 	logic           PC_enable;
+
+	logic out_valid;
 	
 	assign proc2Imem_addr = {PC_reg[`XLEN-1:3], 3'b0};
 	
 	// this mux is because the Imem gives us 64 bits not 32 bits
 	assign if_packet_out.inst = (s_hazard == STRUCTURAL_HAZARD) ? `NOP : (PC_reg[2] ? Imem2proc_data[63:32] : Imem2proc_data[31:0]);
+	assign if_packet_out.valid = (s_hazard == STRUCTURAL_HAZARD) ? 0 : 1;
 	
 	// default next PC value
 	assign PC_plus_4 = PC_reg + 4;
@@ -77,11 +80,13 @@ module if_stage(
 	// fetch to stall until the previous instruction has completed
 	// This must be removed for Project 3
 	// synopsys sync_set_reset "reset"
+	/*
 	always_ff @(posedge clock) begin
 		if (reset)
 			if_packet_out.valid <= `SD 1;  // must start with something
 		else
 			//if_packet_out.valid <= `SD mem_wb_valid_inst;
-			if_packet_out.valid <= `SD 1;
+			if_packet_out.valid <= `SD out_valid;
 	end
+	*/
 endmodule  // module if_stage

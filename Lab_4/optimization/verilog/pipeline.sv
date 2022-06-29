@@ -240,7 +240,7 @@ module pipeline (
 				end
 				else begin
 					if_id_packet <= `SD '{
-						1,
+						`FALSE,
 						`NOP,
 						if_packet.NPC,
 						if_packet.PC,
@@ -266,7 +266,7 @@ module pipeline (
 				end
 				else begin
 					if_id_packet <= `SD '{
-						1,
+						`FALSE,
 						`NOP,
 						if_packet.NPC,
 						if_packet.PC,
@@ -472,7 +472,7 @@ module pipeline (
 						0,
 						0,
 						0,
-						1,
+						`FALSE,
 						0,
 						N_STRUCTURAL_HAZARD,
 						`NOP

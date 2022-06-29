@@ -305,10 +305,10 @@ module id_stage(
 	//logic opa_rs;
 	//logic opb_rs;
 
-	assign EX_dest_equal_rs1 = (if_id_packet_in.EX_dest_reg_idx == if_id_packet_in.inst.r.rs1) && !EX_inst_read_only; //&& opa_rs;
-	assign EX_dest_equal_rs2 = (if_id_packet_in.EX_dest_reg_idx == if_id_packet_in.inst.r.rs2) && !EX_inst_read_only; //&& opb_rs;
-	assign MEM_dest_equal_rs1 = (if_id_packet_in.MEM_dest_reg_idx == if_id_packet_in.inst.r.rs1) && !MEM_inst_read_only; //&& opa_rs;
-	assign MEM_dest_equal_rs2 = (if_id_packet_in.MEM_dest_reg_idx == if_id_packet_in.inst.r.rs2) && !MEM_inst_read_only; //&& opb_rs;
+	assign EX_dest_equal_rs1 = (if_id_packet_in.EX_dest_reg_idx == if_id_packet_in.inst.r.rs1) && !EX_inst_read_only && (if_id_packet_in.inst.r.rs1 != `ZERO_REG); //&& opa_rs;
+	assign EX_dest_equal_rs2 = (if_id_packet_in.EX_dest_reg_idx == if_id_packet_in.inst.r.rs2) && !EX_inst_read_only && (if_id_packet_in.inst.r.rs2 != `ZERO_REG); //&& opb_rs;
+	assign MEM_dest_equal_rs1 = (if_id_packet_in.MEM_dest_reg_idx == if_id_packet_in.inst.r.rs1) && !MEM_inst_read_only && (if_id_packet_in.inst.r.rs1 != `ZERO_REG); //&& opa_rs;
+	assign MEM_dest_equal_rs2 = (if_id_packet_in.MEM_dest_reg_idx == if_id_packet_in.inst.r.rs2) && !MEM_inst_read_only && (if_id_packet_in.inst.r.rs2 != `ZERO_REG); //&& opb_rs;
 	always_comb begin
 		casez(if_id_packet_in.inst)
 			`RV32_LB, `RV32_LH, `RV32_LW, `RV32_LBU, `RV32_LHU, `RV32_SB, `RV32_SH, `RV32_SW: inst_use_mem = 1;
@@ -398,7 +398,7 @@ module id_stage(
 					`FALSE,
 					`FALSE,
 					`FALSE,
-					`TRUE, // valid
+					`FALSE, // valid
 					WB_EX_A_HALT,
 					local_id_packet_out.s_hazard,
 					0,
@@ -424,7 +424,7 @@ module id_stage(
 					`FALSE,
 					`FALSE,
 					`FALSE,
-					`TRUE, // valid
+					`FALSE, // valid
 					WB_EX_B_HALT,
 					local_id_packet_out.s_hazard,
 					0,
