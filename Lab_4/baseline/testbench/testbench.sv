@@ -8,8 +8,6 @@
 //                                                                     //
 /////////////////////////////////////////////////////////////////////////
 
-//`define DEBUG_TEST
-
 `timescale 1ns/100ps
 
 import "DPI-C" function void print_header(string str);
@@ -64,22 +62,8 @@ module testbench;
 	logic [`XLEN-1:0] mem_wb_NPC;
 	logic [31:0] mem_wb_IR;
 	logic        mem_wb_valid_inst;
-
-`ifdef DEBUG_TEST
-	FORWARD_TYPE forward_debug;
-	STRUCTURAL_HAZARD_TYPE s_hazard_debug;
+	
 	logic [`XLEN-1:0] target_pc;
-	logic ex_mem_wr_debug;
-	logic ex_mem_rd_debug;
-	logic [1:0] proc2Dmem_command_debug;
-	logic [31:0] proc2Imem_addr_debug;
-	logic [`XLEN-1:0] PC_reg_debug;
-	logic [`XLEN-1:0] next_PC_debug;
-	logic take_branch_debug;
-	logic take_branch_ex_debug;
-	logic EX_inst_use_mem_debug;
-	logic [`XLEN-1:0] if_id_packet_ex_inst_in_debug;
-`endif
 
     //counter used for when pipeline infinite loops, forces termination
     logic [63:0] debug_counter;
@@ -120,24 +104,8 @@ module testbench;
 		.ex_mem_valid_inst(ex_mem_valid_inst),
 		.mem_wb_NPC(mem_wb_NPC),
 		.mem_wb_IR(mem_wb_IR),
-		.mem_wb_valid_inst(mem_wb_valid_inst)
-		
-`ifdef DEBUG_TEST
-        ,
-		.forward_debug(forward_debug),
-		.s_hazard_debug(s_hazard_debug),
-		.target_pc(target_pc),
-		.ex_mem_wr_debug(ex_mem_wr_debug),
-		.ex_mem_rd_debug(ex_mem_rd_debug),
-		.proc2Dmem_command_debug(proc2Dmem_command_debug),
-		.proc2Imem_addr_debug(proc2Imem_addr_debug),
-		.PC_reg_debug(PC_reg_debug),
-		.next_PC_debug(next_PC_debug),
-		.take_branch_debug(take_branch_debug),
-		.take_branch_ex_debug(take_branch_ex_debug),
-		.EX_inst_use_mem_debug(EX_inst_use_mem_debug),
-		.if_id_packet_ex_inst_in_debug(if_id_packet_ex_inst_in_debug)
-`endif
+		.mem_wb_valid_inst(mem_wb_valid_inst),
+		.target_pc(target_pc)
 	);
 	
 	

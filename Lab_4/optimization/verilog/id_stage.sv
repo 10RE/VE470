@@ -7,7 +7,7 @@
 //                 compute immediate operand (if applicable)           // 
 //                                                                     //
 /////////////////////////////////////////////////////////////////////////
-`define DEBUG_TEST
+//`define DEBUG_TEST
 
 `timescale 1ns/100ps
 
@@ -366,11 +366,60 @@ module id_stage(
 	*/
 	//assign opa_rs = local_id_packet_out.opa_select == OPA_IS_RS1;
 	//assign opb_rs = local_id_packet_out.opb_select == OPB_IS_RS2;
-							 
+	
+	assign local_id_packet_out.inst = ( if_id_packet_in.inst == 0 ) ? `NOP : if_id_packet_in.inst;
+	
+	/*
+	assign local_halt_id_packet_out.NPC = if_id_packet_in.NPC;
+	assign local_halt_id_packet_out.PC = if_id_packet_in.PC;
+	assign local_halt_id_packet_out.rs1_value = 0;
+	assign local_halt_id_packet_out.rs2_value = 0;
+	assign local_halt_id_packet_out.opa_select = OPA_IS_RS1;
+	assign local_halt_id_packet_out.opb_select = OPB_IS_RS2;
+	assign local_halt_id_packet_out.inst = `NOP;
+	assign local_halt_id_packet_out.dest_reg_idx = `ZERO_REG;
+	assign local_halt_id_packet_out.alu_func = ALU_ADD;
+	assign local_halt_id_packet_out.rd_mem = `FALSE;
+	assign local_halt_id_packet_out.wr_mem = `FALSE;
+	assign local_halt_id_packet_out.cond_branch = `FALSE;
+	assign local_halt_id_packet_out.uncond_branch = `FALSE;
+	assign local_halt_id_packet_out.halt = `FALSE;
+	assign local_halt_id_packet_out.illegal = `FALSE;
+	assign local_halt_id_packet_out.csr_op = `FALSE;
+	assign local_halt_id_packet_out.valid = `FALSE;
+	//assign local_halt_id_packet_out.forward = WB_EX_A_HALT;
+	assign local_halt_id_packet_out.s_hazard = local_id_packet_out.s_hazard;
+	assign local_halt_id_packet_out.MEM_value = 0;
+	assign local_halt_id_packet_out.WB_value = 0;
+	*/
+	
 
 	always_comb begin
-		local_id_packet_out.inst = ( if_id_packet_in.inst == 0 ) ? `NOP : if_id_packet_in.inst;
+				
+		local_halt_id_packet_out.NPC = if_id_packet_in.NPC;
+		local_halt_id_packet_out.PC = if_id_packet_in.PC;
+		local_halt_id_packet_out.rs1_value = 0;
+		local_halt_id_packet_out.rs2_value = 0;
+		local_halt_id_packet_out.opa_select = OPA_IS_RS1;
+		local_halt_id_packet_out.opb_select = OPB_IS_RS2;
+		local_halt_id_packet_out.inst = `NOP;
+		local_halt_id_packet_out.dest_reg_idx = `ZERO_REG;
+		local_halt_id_packet_out.alu_func = ALU_ADD;
+		local_halt_id_packet_out.rd_mem = `FALSE;
+		local_halt_id_packet_out.wr_mem = `FALSE;
+		local_halt_id_packet_out.cond_branch = `FALSE;
+		local_halt_id_packet_out.uncond_branch = `FALSE;
+		local_halt_id_packet_out.halt = `FALSE;
+		local_halt_id_packet_out.illegal = `FALSE;
+		local_halt_id_packet_out.csr_op = `FALSE;
+		local_halt_id_packet_out.valid = `FALSE;
+		local_halt_id_packet_out.s_hazard = local_id_packet_out.s_hazard;
+		local_halt_id_packet_out.MEM_value = 0;
+		local_halt_id_packet_out.WB_value = 0;
 		
+		local_halt_id_packet_out.forward = N_FORWARD;
+		local_id_packet_out.forward = N_FORWARD;
+			
 		if (inst_use_mem) begin
 			local_id_packet_out.s_hazard = STRUCTURAL_HAZARD;
 		end
@@ -381,6 +430,8 @@ module id_stage(
 		if (EX_inst_load) begin
 			if (EX_dest_equal_rs1) begin
 				local_halt = 1'b1;
+				local_halt_id_packet_out.forward = WB_EX_A_HALT;
+				/*
 				local_halt_id_packet_out = '{
 					if_id_packet_in.NPC,
 					if_id_packet_in.PC,
@@ -404,9 +455,12 @@ module id_stage(
 					0,
 					0
 				};
+				*/
 			end
 			else if (EX_dest_equal_rs2) begin
 				local_halt = 1'b1;
+				local_halt_id_packet_out.forward = WB_EX_B_HALT;
+				/*
 				local_halt_id_packet_out = '{
 					if_id_packet_in.NPC,
 					if_id_packet_in.PC,
@@ -430,25 +484,31 @@ module id_stage(
 					0,
 					0
 				};
+				*/
 			end
 			else if (MEM_dest_equal_rs1 && MEM_dest_equal_rs2) begin
 				local_halt = 1'b0;
 				local_id_packet_out.forward = WB_A_WB_B;
+				local_halt_id_packet_out.forward = N_FORWARD;
 			end
 			else if (MEM_dest_equal_rs1 && !MEM_dest_equal_rs2) begin
 				local_halt = 1'b0;
 				local_id_packet_out.forward = WB_EX_A;
+				local_halt_id_packet_out.forward = N_FORWARD;
 			end
 			else if (MEM_dest_equal_rs2 && !MEM_dest_equal_rs1) begin
 				local_halt = 1'b0;
 				local_id_packet_out.forward = WB_EX_B;
+				local_halt_id_packet_out.forward = N_FORWARD;
 			end
 			else begin
 				local_halt = 1'b0;
 				local_id_packet_out.forward = N_FORWARD;
+				local_halt_id_packet_out.forward = N_FORWARD;
 			end
 		end
 		else begin
+			local_halt_id_packet_out.forward = N_FORWARD;
 			if (EX_dest_equal_rs1 && EX_dest_equal_rs2) begin
 				local_halt = 1'b0;
 				local_id_packet_out.forward = MEM_A_MEM_B;

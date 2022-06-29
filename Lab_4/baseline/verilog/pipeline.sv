@@ -12,8 +12,6 @@
 `ifndef __PIPELINE_V__
 `define __PIPELINE_V__
 
-//`define DEBUG_TEST
-
 `timescale 1ns/100ps
 
 module pipeline (
@@ -68,40 +66,12 @@ module pipeline (
 	// Outputs from MEM/WB Pipeline Register
 	output logic [`XLEN-1:0] mem_wb_NPC,
 	output logic [31:0] mem_wb_IR,
-	output logic        mem_wb_valid_inst
+	output logic        mem_wb_valid_inst,
 
-	//Debug
-	`ifdef DEBUG_TEST
-	,
-	output FORWARD_TYPE forward_debug,
-	output STRUCTURAL_HAZARD_TYPE s_hazard_debug,
-	output logic [`XLEN-1:0] target_pc,
-	output logic ex_mem_wr_debug,
-	output logic ex_mem_rd_debug,
-	output logic [1:0] proc2Dmem_command_debug,
-	output logic [31:0] proc2Imem_addr_debug,
-	output logic [`XLEN-1:0] PC_reg_debug,
-	output logic [`XLEN-1:0] next_PC_debug,
-	output logic take_branch_debug,
-	output logic take_branch_ex_debug,
-	output logic EX_inst_use_mem_debug,
-	output logic if_id_packet_ex_inst_in_debug
-	`endif
-
+    output logic [`XLEN-1:0] target_pc
 );
 
-	`ifdef DEBUG_TEST
-	assign forward_debug = id_packet.forward;
-	assign s_hazard_debug = id_packet.s_hazard;
-	assign target_pc = ex_mem_packet.alu_result;
-	assign ex_mem_wr_debug = ex_mem_packet.wr_mem;
-	assign ex_mem_rd_debug = ex_mem_packet.rd_mem;
-	assign proc2Dmem_command_debug = proc2Dmem_command;
-	assign proc2Imem_addr_debug = proc2Imem_addr;
-	assign take_branch_debug = ex_mem_packet.take_branch;
-	assign take_branch_ex_debug = ex_packet.take_branch;
-	assign if_id_packet_ex_inst_in_debug = if_id_packet.EX_inst;
-	`endif
+    assign target_pc = ex_packet.alu_result;
 
 	// Pipeline register enables
 	logic   if_id_enable, id_ex_enable, ex_mem_enable, mem_wb_enable;
@@ -184,19 +154,9 @@ module pipeline (
 		.ex_mem_target_pc(ex_mem_packet.alu_result),
 		.Imem2proc_data(mem2proc_data),
 		
-		.forward(id_packet.forward),
-		.s_hazard(ex_mem_packet.valid ? ex_mem_packet.s_hazard : N_STRUCTURAL_HAZARD),
-
 		// Outputs
 		.proc2Imem_addr(proc2Imem_addr),
 		.if_packet_out(if_packet)
-
-		`ifdef DEBUG_TEST
-		,
-		.PC_reg_debug(PC_reg_debug),
-		.next_PC_debug(next_PC_debug)
-		`endif
-
 	);
 
 
@@ -209,7 +169,7 @@ module pipeline (
 	assign if_id_NPC        = if_id_packet.NPC;
 	assign if_id_IR         = if_id_packet.inst;
 	assign if_id_valid_inst = if_id_packet.valid;
-	assign if_id_enable = ( (id_packet.forward == WB_EX_A_HALT || id_packet.forward == WB_EX_B_HALT) && (id_ex_IR != `NOP) )? 1'b0 : 1'b1;//(id_packet.hazard == STRUCTURAL) ? 1'b0 : 1'b1; // always enabled
+	assign if_id_enable = 1'b1; // always enabled
 	// synopsys sync_set_reset "reset"
 	always_ff @(posedge clock) begin
 		if (reset) begin 
@@ -217,69 +177,10 @@ module pipeline (
 			if_id_packet.valid <= `SD `FALSE;
             if_id_packet.NPC   <= `SD 0;
             if_id_packet.PC    <= `SD 0;
-
-			if_id_packet.EX_dest_reg_idx <= `SD 0;
-			if_id_packet.MEM_dest_reg_idx <= `SD 0;
-
-			if_id_packet.EX_inst <= `SD `NOP;
-			if_id_packet.MEM_inst <= `SD `NOP;
 		end else begin// if (reset)
 			if (if_id_enable) begin
-				//if_id_packet <= `SD if_packet; 
-				if ((!ex_mem_packet.take_branch)) begin
-					if_id_packet <= `SD '{
-						if_packet.valid,
-						if_packet.inst,
-						if_packet.NPC,
-						if_packet.PC,
-						id_packet.dest_reg_idx, //EX_dest_reg_idx
-						ex_packet.dest_reg_idx, //MEM_dest_reg_idx
-						id_packet.inst, // EX_inst
-						ex_packet.inst // MEM_inst
-					}; 
-				end
-				else begin
-					if_id_packet <= `SD '{
-						`FALSE,
-						`NOP,
-						if_packet.NPC,
-						if_packet.PC,
-						0, //EX_dest_reg_idx
-						0, //MEM_dest_reg_idx
-						`NOP,//, // EX_inst
-						`NOP//ex_packet.inst // MEM_inst
-					}; 
-				end
-			end // if (if_id_enable)
-			else begin
-				if ((!ex_mem_packet.take_branch)) begin
-					if_id_packet <= `SD '{
-						if_id_packet.valid && (!ex_mem_packet.take_branch),
-						if_id_packet.inst,
-						if_id_packet.NPC,
-						if_id_packet.PC,
-						id_packet.dest_reg_idx, //EX_dest_reg_idx
-						ex_packet.dest_reg_idx, //MEM_dest_reg_idx
-						id_packet.inst,//, // EX_inst
-						ex_packet.inst // MEM_inst
-					}; 
-				end
-				else begin
-					if_id_packet <= `SD '{
-						`FALSE,
-						`NOP,
-						if_packet.NPC,
-						if_packet.PC,
-						0, //EX_dest_reg_idx
-						0, //MEM_dest_reg_idx
-						`NOP,//, // EX_inst
-						`NOP//ex_packet.inst // MEM_inst
-					}; 
-				end
-				//if_id_packet.EX_dest_reg_idx <= `SD id_packet.dest_reg_idx; //EX_dest_reg_idx
-				//if_id_packet.MEM_dest_reg_idx <= `SD ex_packet.dest_reg_idx; //MEM_dest_reg_idx
-				//if_id_packet.inst <= `SD id_packet.inst;
-			end
+				if_id_packet <= `SD if_packet; 
+			end // if (if_id_enable)	
 		end
 	end // always
 
@@ -300,10 +201,6 @@ module pipeline (
 		
 		// Outputs
 		.id_packet_out(id_packet)
-		`ifdef DEBUG_TEST
-		,
-		.EX_inst_use_mem_debug(EX_inst_use_mem_debug)
-		`endif
 	);
 
 
@@ -317,7 +214,6 @@ module pipeline (
 	assign id_ex_IR         = id_ex_packet.inst;
 	assign id_ex_valid_inst = id_ex_packet.valid;
 
-	//assign id_ex_enable = (ex_packet.forward == WB_EX_A_HALT || ex_packet.forward == WB_EX_B_HALT) ? 1'b0 : 1'b1; // always enabled
 	assign id_ex_enable = 1'b1; // always enabled
 	// synopsys sync_set_reset "reset"
 	always_ff @(posedge clock) begin
@@ -338,68 +234,11 @@ module pipeline (
 				1'b0, //halt
 				1'b0, //illegal
 				1'b0, //csr_op
-				1'b0, //valid
-				N_FORWARD, //forward
-				N_STRUCTURAL_HAZARD, //s_hazard
-				{`XLEN{1'b0}}, // MEM_value
-				{`XLEN{1'b0}} // WB_value
+				1'b0 //valid
 			}; 
 		end else begin // if (reset)
 			if (id_ex_enable) begin
-				//id_ex_packet <= `SD id_packet;
-				if ((!ex_mem_packet.take_branch)) begin
-					id_ex_packet <= `SD '{
-						id_packet.NPC,
-						id_packet.PC, 
-						id_packet.rs1_value, 
-						id_packet.rs2_value, 
-						id_packet.opa_select, 
-						id_packet.opb_select, 
-						id_packet.inst,
-						id_packet.dest_reg_idx,
-						id_packet.alu_func, 
-						id_packet.rd_mem, //rd_mem
-						id_packet.wr_mem, //wr_mem
-						id_packet.cond_branch, //cond
-						id_packet.uncond_branch, //uncond
-						id_packet.halt, //halt
-						id_packet.illegal, //illegal
-						id_packet.csr_op, //csr_op
-						id_packet.valid, //valid
-						id_packet.forward, //forwarding
-						id_packet.s_hazard, //s_hazard
-						ex_packet.alu_result, // MEM_value
-						mem_result_out // WB_value
-					};
-				end
-				else begin
-						id_ex_packet <= `SD '{
-							{`XLEN{1'b0}},
-							{`XLEN{1'b0}}, 
-							{`XLEN{1'b0}}, 
-							{`XLEN{1'b0}}, 
-							OPA_IS_RS1, 
-							OPB_IS_RS2, 
-							`NOP,
-							`ZERO_REG,
-							ALU_ADD, 
-							1'b0, //rd_mem
-							1'b0, //wr_mem
-							1'b0, //cond
-							1'b0, //uncond
-							1'b0, //halt
-							1'b0, //illegal
-							1'b0, //csr_op
-							1'b0, //valid
-							N_FORWARD, //forward
-							N_STRUCTURAL_HAZARD, //s_hazard
-							{`XLEN{1'b0}}, // MEM_value
-							{`XLEN{1'b0}} // WB_value
-						};
-				end
-				//assign id_ex_packet.MEM_value = ex_packet.rs2_value;
-				//assign id_ex_packet.WB_value = mem_result_out;
-
+				id_ex_packet <= `SD id_packet;
 			end // if
 		end // else: !if(reset)
 	end // always
@@ -440,46 +279,7 @@ module pipeline (
 				// these are forwarded directly from ID/EX registers, only for debugging purposes
 				ex_mem_IR     <= `SD id_ex_IR;
 				// EX outputs
-				if ((!ex_mem_packet.take_branch)) begin
-					ex_mem_packet <= `SD {
-						ex_packet.alu_result,
-						ex_packet.NPC,
-						ex_packet.take_branch,
-						ex_packet.rs2_value,
-						ex_packet.rd_mem,
-						ex_packet.wr_mem,
-						ex_packet.dest_reg_idx,
-						ex_packet.halt,
-						ex_packet.illegal,
-						ex_packet.csr_op,
-						ex_packet.valid,
-						ex_packet.mem_size,
-						ex_packet.s_hazard,
-						ex_packet.inst
-						//ex_packet.cond_branch
-					};
-				end
-				else begin
-					ex_mem_IR     <= `SD `NOP;
-					ex_mem_packet <= `SD {
-						0,
-						ex_packet.NPC,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						`FALSE,
-						0,
-						N_STRUCTURAL_HAZARD,
-						`NOP
-						//ex_packet.cond_branch
-					};
-				end
-				
+				ex_mem_packet <= `SD ex_packet;
 			end // if
 		end // else: !if(reset)
 	end // always
@@ -559,12 +359,6 @@ module pipeline (
 		.reg_wr_idx_out(wb_reg_wr_idx_out),
 		.reg_wr_en_out(wb_reg_wr_en_out)
 	);
-
-//////////////////////////////////////////////////
-//                                              //
-//                  Hazard V                    //
-//                                              //
-//////////////////////////////////////////////////
 
 endmodule  // module verisimple
 `endif // __PIPELINE_V__
